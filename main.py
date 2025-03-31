@@ -14,12 +14,9 @@ def handler(request, response):
         # Get data from request body
         data = json.loads(request.get("body", "{}"))
     else:  # GET
-        # Use default data or load from another source
-        data = [
-            {"name": "John", "marks": 85},
-            {"name": "Alice", "marks": 92},
-            {"name": "Bob", "marks": 78}
-        ]
+        # Load data from q-vercel-python.json
+        with open('q-vercel-python.json') as f:
+            data = json.load(f)
     
     # Process the data
     result = {"marks": []}
@@ -37,4 +34,3 @@ def handler(request, response):
         },
         "body": json.dumps(result)
     }
-
