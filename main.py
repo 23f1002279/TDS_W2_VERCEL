@@ -1,36 +1,72 @@
-from http.server import BaseHTTPRequestHandler
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import json
-import urllib.parse
+from typing import List, Optional
 
-def handler(request, response):
-    # Get the request method
-    method = request.get("method", "")
-    
-    # Parse query parameters
-    query = request.get("query", {})
-    names = query.get("name", [])
-    
-    if method == "POST":
-        # Get data from request body
-        data = json.loads(request.get("body", "{}"))
-    else:  # GET
-        # Load data from q-vercel-python.json
+# Initialize FastAPI app
+app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
+# Function to load data from file
+def load_data():
+    try:
         with open('q-vercel-python.json') as f:
-            data = json.load(f)
+            return json.load(f)
+    except FileNotFoundError:
+        # Return empty list if file not found
+        return []
+    except json.JSONDecodeError:
+        # Return empty list if JSON is invalid
+        return []
+
+# GET endpoint
+@app.get("/api/marks")
+async def get_marks(name: Optional[List[str]] = None):
+    # Load data from file
+    data = load_data()
+    
+    # If name parameter is not provided
+    if not name:
+        return {"marks": []}
     
     # Process the data
     result = {"marks": []}
-    for name in names:
+    for n in name:
         for entry in data:
-            if entry["name"] == name:
-                result["marks"].append(entry["marks"])
+            if entry.get("name") == n:
+                result["marks"].append(entry.get("marks"))
     
-    # Return the response
-    return {
-        "statusCode": 200,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
-        },
-        "body": json.dumps(result)
-    }
+    return result
+
+# POST endpoint
+@app.post("/api/marks")
+async def post_marks(request: Request, name: Optional[List[str]] = None):
+    try:
+        # Get data from request body
+        body = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    
+    # If name parameter is not provided
+    if not name:
+        return {"marks": []}
+    
+    # Process the data
+    result = {"marks": []}
+    for n in name:
+        for entry in body:
+            if entry.get("name") == n:
+                result["marks"].append(entry.get("marks"))
+    
+    return result
+
+# For local developmen
